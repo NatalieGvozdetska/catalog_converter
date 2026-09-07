@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpecStream AI - Multi-Modal Catalog Ingestor & BMEcat XML Studio</title>
+  <link rel="stylesheet" href="/static/styles.css?v=3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header Navigation -->
+    <header class="top-header">
+      <div class="brand-wrapper">
+        <div class="brand-logo-icon">S</div>
+        <div class="brand-title-group">
+          <h1>SpecStream AI</h1>
+          <span class="brand-subtitle">Zero-Schema Catalog Ingestor & eCl@ss Vector Classifier</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="apiKeySettingsBtn" class="btn btn-outline-header" onclick="openApiKeyModal()">
+          🔑 AI Model Settings
+        </button>
+        <button id="exportXmlBtn" class="btn btn-primary" onclick="openExportModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export BMEcat XML
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workbench Area -->
+    <main class="main-workbench">
+      
+      <!-- Upload Dropzone Section -->
+      <section class="upload-card" id="dropzoneCard">
+        
+        <!-- Default Initial State -->
+        <div id="uploadDefaultState">
+          <div class="upload-icon-wrapper">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
+          </div>
+          <h2 class="upload-title">Drop Unstructured PDF Catalog, Spec Image or CSV</h2>
+          <p class="upload-desc">Multimodal AI extracts items, validates schemas with Pydantic, and maps eCl@ss 7.1 taxonomy codes via Vector Search.</p>
+          
+          <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.csv" style="display: none;" onchange="handleFileSelect(event)">
+          <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()" style="padding: 0.65rem 1.4rem; font-size: 0.95rem;">
+            📁 Select Local File
+          </button>
+        </div>
+
+        <!-- Selected File State Card -->
+        <div id="uploadSelectedState" style="display: none;" class="selected-file-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="file-icon-badge" id="selectedFileBadgeIcon">📄</div>
+              <div style="text-align: left;">
+                <div id="selectedFileName" style="font-weight: 800; font-size: 1.05rem; color: #0f172a;">Uploaded_File.pdf</div>
+                <div id="selectedFileDetails" style="font-size: 0.8rem; color: #475569;">Size: 245 KB &bull; PDF Document</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <button id="transformBtn" class="btn btn-primary" onclick="startSelectedFileTransformation()" style="padding: 0.6rem 1.25rem;">
+                ⚡ Transform Catalog with AI
+              </button>
+              <button class="btn btn-outline" onclick="resetFileSelection()">Change File</button>
+            </div>
+          </div>
+
+          <!-- Loading Progress Bar -->
+          <div id="extractionProgress" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: #1e3a8a; margin-bottom: 0.35rem;">
+              <span id="progressStepText">1. Extracting visual document layout...</span>
+              <span id="progressPercent">60%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBarFill" style="width: 60%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sample-pills-group">
+          <span class="sample-label">Or try 1-click sample dataset:</span>
+          <button class="sample-pill-btn" onclick="loadSampleCatalog('industrial_fasteners')">
+            🔩 Industrial Fasteners Spec Sheet (PDF)
+          </button>
+          <button class="sample-pill-btn" onclick="loadSampleCatalog('electrical_automation')">
+            ⚡ Electrical Sensors & Glands (PNG Image)
+          </button>
+          <button class="sample-pill-btn" onclick="loadSampleCatalog('lab_equipment')">
+            🧪 Laboratory Supplies (CSV)
+          </button>
+        </div>
+      </section>
+
+      <!-- Split Workbench Grid -->
+      <div class="workbench-grid">
+        
+        <!-- Left Panel: Original Document & Visual Highlights -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Document Layout Preview
+            </h3>
+            <span id="docTypeBadge" class="badge badge-valid">PDF SPEC SHEET</span>
+          </div>
+          <div class="panel-body">
+            <div id="docViewerContainer" class="doc-viewer-container">
+              <div id="docHeaderTitle" class="doc-text-header">No document loaded</div>
+              <div id="docBboxList"></div>
+              <pre id="docRawTextPreview" style="white-space: pre-wrap; font-size: 0.75rem; color: #475569;"></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Extracted Items Data Workbench -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Extracted Catalog Items & Pydantic Validation Grid
+            </h3>
+            <button class="btn btn-outline" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;" onclick="addNewItemRow()">+ Add Item</button>
+          </div>
+          <div class="panel-body">
+            
+            <!-- Summary Stats Bar -->
+            <div class="catalog-summary-bar">
+              <div class="summary-stats">
+                <div class="stat-item">
+                  <span id="statTotalItems" class="stat-value">0</span>
+                  <span class="stat-label">Total Items</span>
+                </div>
+                <div class="stat-item">
+                  <span id="statValidItems" class="stat-value" style="color: #166534;">0</span>
+                  <span class="stat-label">Valid Items</span>
+                </div>
+                <div class="stat-item">
+                  <span id="statWarningItems" class="stat-value" style="color: #854d0e;">0</span>
+                  <span class="stat-label">Warnings</span>
+                </div>
+                <div class="stat-item">
+                  <span id="statQualityScore" class="stat-value" style="color: #1e3a8a;">100%</span>
+                  <span class="stat-label">Pydantic Quality Score</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Editable Table Grid -->
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Supplier SKU</th>
+                    <th>Product Title</th>
+                    <th>Price</th>
+                    <th>UOM</th>
+                    <th>MPN</th>
+                    <th>eCl@ss 7.1 Taxonomy</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="catalogTableBody">
+                  <!-- Dynamic rows rendered here -->
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- AI Model Settings Modal -->
+    <div id="apiKeyModal" class="modal-backdrop">
+      <div class="modal-dialog" style="max-width: 550px;">
+        <div class="modal-header">
+          <h3>🔑 Multimodal AI Model Configuration</h3>
+          <button class="modal-close-btn" onclick="closeApiKeyModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 1rem;">
+            SpecStream AI uses standard structural NLP entity chunking by default. To enable direct live <strong>Gemini Vision Multimodal LLM Extraction</strong> on complex catalog documents, enter your API key below:
+          </p>
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #0f172a; margin-bottom: 0.35rem;">
+              Gemini Vision API Key
+            </label>
+            <input id="geminiApiKeyInput" type="password" class="cell-input" placeholder="AIzaSy..." style="width: 100%; padding: 0.6rem;">
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 0.75rem; border-radius: 6px;">
+            ✓ Your API key is stored securely in local browser session memory and sent directly to your local FastAPI backend server.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeApiKeyModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveApiKey()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- eCl@ss Vector Search Modal -->
+    <div id="taxonomyModal" class="modal-backdrop">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>eCl@ss 7.1 Vector Embedding Taxonomy Search</h3>
+          <button class="modal-close-btn" onclick="closeTaxonomyModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 1rem;">
+            Vector embeddings match product features against official eCl@ss standard codes using cosine similarity.
+          </p>
+          <div id="vectorMatchResultsList">
+            <!-- Vector search results rendered here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeTaxonomyModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BMEcat XML & Multi-Format Export Modal -->
+    <div id="exportModal" class="modal-backdrop">
+      <div class="modal-dialog" style="max-width: 950px;">
+        <div class="modal-header">
+          <h3>Catalog Multi-Format Export Studio</h3>
+          <button class="modal-close-btn" onclick="closeExportModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <button id="tabBmecatBtn" class="btn btn-primary" onclick="switchExportTab('bmecat')">BMEcat 1.2 XML</button>
+            <button id="tabCxmlBtn" class="btn btn-outline" onclick="switchExportTab('cxml')">cXML Format</button>
+            <button id="tabCsvBtn" class="btn btn-outline" onclick="switchExportTab('csv')">Enterprise CSV</button>
+          </div>
+          
+          <pre id="codeExportPreview" class="code-preview-block"></pre>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="copyExportToClipboard()">Copy to Clipboard</button>
+          <button id="downloadFileBtn" class="btn btn-primary" onclick="downloadExportFile()">Download Export File</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="app-footer">
+      SpecStream AI &copy; 2026 - Multimodal Catalog Extraction & BMEcat Ingest Studio
+    </footer>
+
+  </div>
+
+  <script src="/static/app.js?v=3"></script>
+</body>
+</html>
